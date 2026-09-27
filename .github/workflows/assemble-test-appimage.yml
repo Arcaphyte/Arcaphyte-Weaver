@@ -1,0 +1,29 @@
+name: Assemble verified test AppImage
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Arcaphyte/Arcaphyte-Weaver
+    steps:
+      - name: Assemble and verify installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release download v0.2.0-test.1 --pattern 'weaver-appimage-transfer.part*' --dir parts
+          test "$(find parts -type f | wc -l)" -eq 20
+          cat parts/weaver-appimage-transfer.part{000..019} > Arcaphyte.Weaver_0.2.0_amd64.AppImage
+          echo '13c76559639632420a13f9d1ad7a8db71ba84e4eafe0857f53bd3ec87d801da2  Arcaphyte.Weaver_0.2.0_amd64.AppImage' | sha256sum --check
+          gh release upload v0.2.0-test.1 Arcaphyte.Weaver_0.2.0_amd64.AppImage
+      - name: Remove temporary transfer parts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for part in parts/weaver-appimage-transfer.part*; do
+            gh release delete-asset v0.2.0-test.1 "$(basename "$part")" --yes
+          done
